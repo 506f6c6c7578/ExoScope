@@ -1,0 +1,229 @@
+---
+import type { TaughtMethod } from "@/data/methods";
+
+interface Props {
+    method: TaughtMethod;
+}
+
+const { method } = Astro.props;
+
+const descriptions: Record<TaughtMethod, { title: string; description: string }> = {
+    transit: {
+        title: "Schéma de la méthode du transit",
+        description: "Une petite planète passe devant le disque de son étoile. En dessous, la courbe de luminosité de l'étoile présente un creux pendant le passage de la planète."
+    },
+    "vitesse-radiale": {
+        title: "Schéma de la méthode des vitesses radiales",
+        description: "L'étoile et sa planète tournent autour d'un centre de masse commun. L'étoile oscille vers l'observateur puis s'en éloigne, ce qui produit une variation sinusoïdale de sa vitesse mesurée."
+    },
+    "imagerie-directe": {
+        title: "Schéma de l'imagerie directe",
+        description: "La lumière de l'étoile est bloquée par un masque de coronographe, ce qui laisse apparaître un point lumineux faible à l'écart : la planète."
+    },
+    microlentille: {
+        title: "Schéma de la microlentille gravitationnelle",
+        description: "La lumière d'une étoile lointaine est courbée par la gravité d'une étoile plus proche alignée avec la Terre. La courbe d'amplification forme une bosse, avec un pic bref causé par la planète."
+    },
+    astrometrie: {
+        title: "Schéma de la méthode astrométrique",
+        description: "Sur le ciel, une étoile sans planète suit une trajectoire rectiligne. Avec une planète massive, sa trajectoire ondule légèrement autour de cette ligne."
+    },
+    "variation-temps-transit": {
+        title: "Schéma des variations du temps de transit",
+        description: "Deux frises chronologiques : les transits prévus sont régulièrement espacés, tandis que les transits observés arrivent un peu en avance ou en retard à cause d'une autre planète."
+    }
+};
+
+const { title, description } = descriptions[method];
+const titleId = `schema-${method}-titre`;
+const descriptionId = `schema-${method}-description`;
+const expected = [110, 160, 210, 260];
+const observed = [114, 154, 216, 252];
+---
+
+<svg class="diagram" viewBox="0 0 320 200" role="img" aria-labelledby={`${titleId} ${descriptionId}`}>
+    <title id={titleId}>{title}</title>
+    <desc id={descriptionId}>{description}</desc>
+
+    {method === "transit" && (
+            <g>
+                <circle class="star" cx="160" cy="62" r="44"/>
+                <line class="orbit" x1="70" y1="70" x2="250" y2="70"/>
+                <circle class="planet" cx="160" cy="70" r="8"/>
+                <line class="axis" x1="40" y1="182" x2="290" y2="182"/>
+                <line class="axis" x1="40" y1="126" x2="40" y2="182"/>
+                <path class="curve" d="M40 140 H126 C134 140 136 162 144 162 H176 C184 162 186 140 194 140 H290"/>
+                <text class="label" x="46" y="124">Luminosité</text>
+                <text class="label" x="290" y="197" text-anchor="end">Temps</text>
+                <text class="label label--accent" x="160" y="177" text-anchor="middle">transit</text>
+            </g>
+    )}
+
+    {method === "vitesse-radiale" && (
+            <g>
+                <ellipse class="orbit" cx="118" cy="62" rx="88" ry="24"/>
+                <circle class="star" cx="112" cy="62" r="22"/>
+                <path class="arrow" d="M80 62 H64 M70 57 64 62 70 67"/>
+                <path class="arrow" d="M144 62 H160 M154 57 160 62 154 67"/>
+                <circle class="planet" cx="206" cy="62" r="7"/>
+                <path class="arrow arrow--muted" d="M246 62 H292 M286 57 292 62 286 67"/>
+                <text class="label" x="294" y="46" text-anchor="end">vers l'observateur</text>
+                <line class="axis" x1="40" y1="156" x2="290" y2="156"/>
+                <path class="curve" d="M40 156 C58 126 78 126 96 156 S134 186 152 156 S190 126 208 156 S246 186 264 156 S282 140 290 136"/>
+                <text class="label" x="44" y="118">Vitesse de l'étoile</text>
+                <text class="label" x="294" y="126" text-anchor="end">s'éloigne : décalage vers le rouge</text>
+                <text class="label" x="294" y="196" text-anchor="end">s'approche : décalage vers le bleu</text>
+            </g>
+    )}
+
+    {method === "imagerie-directe" && (
+            <g>
+                <circle class="glow" cx="128" cy="96" r="74"/>
+                <circle class="glow" cx="128" cy="96" r="50"/>
+                <circle class="mask" cx="128" cy="96" r="28"/>
+                <text class="label label--inverse" x="128" y="100" text-anchor="middle">masque</text>
+                <circle class="planet planet--accent" cx="238" cy="56" r="6"/>
+                <text class="label label--accent" x="250" y="60">planète</text>
+                <text class="label" x="160" y="192" text-anchor="middle">La lumière de l'étoile est bloquée par un coronographe</text>
+            </g>
+    )}
+
+    {method === "microlentille" && (
+            <g>
+                <path class="ray" d="M290 58 Q160 8 30 58"/>
+                <path class="ray" d="M290 58 Q160 108 30 58"/>
+                <circle class="observer" cx="30" cy="58" r="5"/>
+                <circle class="star" cx="160" cy="58" r="11"/>
+                <circle class="planet planet--accent" cx="182" cy="42" r="4"/>
+                <circle class="star star--far" cx="290" cy="58" r="8"/>
+                <text class="label" x="30" y="82" text-anchor="middle">Terre</text>
+                <text class="label" x="160" y="86" text-anchor="middle">étoile-lentille</text>
+                <text class="label" x="290" y="82" text-anchor="middle">source</text>
+                <line class="axis" x1="40" y1="188" x2="290" y2="188"/>
+                <path class="curve" d="M40 186 C100 186 128 132 160 130 C176 129 186 150 194 160 L198 140 L202 166 C214 180 240 186 290 186"/>
+                <text class="label" x="44" y="124">Amplification</text>
+                <text class="label label--accent" x="208" y="142">signal de la planète</text>
+            </g>
+    )}
+
+    {method === "astrometrie" && (
+            <g>
+                <line class="orbit" x1="30" y1="166" x2="296" y2="44"/>
+                <path class="curve" d="M30 166 C56 132 78 170 106 132 S152 140 178 98 S228 108 252 70 S286 56 296 44"/>
+                {[[30, 166], [106, 132], [178, 98], [252, 70]].map(([x, y]) => <circle class="planet planet--accent" cx={x} cy={y} r="4"/>)}
+                <text class="label" x="200" y="150">sans planète : ligne droite</text>
+                <text class="label label--accent" x="40" y="40">avec une planète : ondulation</text>
+                <text class="label" x="160" y="194" text-anchor="middle">Position de l'étoile sur le ciel (écart très exagéré)</text>
+            </g>
+    )}
+
+    {method === "variation-temps-transit" && (
+            <g>
+                <text class="label" x="20" y="64">prévus</text>
+                <line class="axis" x1="80" y1="60" x2="296" y2="60"/>
+                {expected.map((x) => <line class="tick" x1={x} y1="48" x2={x} y2="72"/>)}
+                <text class="label label--accent" x="20" y="134">observés</text>
+                <line class="axis" x1="80" y1="130" x2="296" y2="130"/>
+                {observed.map((x) => <line class="tick tick--accent" x1={x} y1="118" x2={x} y2="142"/>)}
+                {expected.map((x, index) => <line class="link" x1={x} y1="74" x2={observed[index] ?? x} y2="116"/>)}
+                <text class="label" x="188" y="180" text-anchor="middle">avance ou retard : quelques minutes à quelques heures</text>
+            </g>
+    )}
+</svg>
+
+<style>
+    .diagram {
+        width: 100%;
+        height: auto;
+        overflow: visible;
+    }
+
+    .star {
+        fill: var(--muted);
+        stroke: var(--chart-muted);
+        stroke-width: 1.5;
+    }
+
+    .star--far {
+        fill: var(--chart-muted);
+    }
+
+    .planet {
+        fill: var(--foreground);
+    }
+
+    .planet--accent {
+        fill: var(--chart-brand);
+    }
+
+    .orbit,
+    .link {
+        fill: none;
+        stroke: var(--chart-muted);
+        stroke-width: 1.5;
+        stroke-dasharray: 4 4;
+    }
+
+    .axis,
+    .tick {
+        stroke: var(--foreground);
+        stroke-width: 1.5;
+    }
+
+    .tick--accent {
+        stroke: var(--chart-brand);
+        stroke-width: 2.5;
+    }
+
+    .curve {
+        fill: none;
+        stroke: var(--chart-brand);
+        stroke-width: 2.5;
+        stroke-linejoin: round;
+    }
+
+    .arrow {
+        fill: none;
+        stroke: var(--foreground);
+        stroke-width: 1.75;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .arrow--muted {
+        stroke: var(--chart-muted);
+    }
+
+    .glow {
+        fill: var(--chart-muted);
+        opacity: 0.18;
+    }
+
+    .mask {
+        fill: var(--foreground);
+    }
+
+    .ray {
+        fill: none;
+        stroke: var(--chart-muted);
+        stroke-width: 1.5;
+    }
+
+    .observer {
+        fill: var(--foreground);
+    }
+
+    .label {
+        font-size: 11px;
+        fill: var(--muted-foreground);
+    }
+
+    .label--accent {
+        font-weight: 600;
+        fill: var(--brand);
+    }
+
+    .label--inverse {
+        fill: var(--background);
+    }
+</style>

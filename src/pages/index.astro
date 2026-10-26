@@ -1,0 +1,366 @@
+---
+import { ArrowRight, ArrowUpRight, Info } from "lucide-react";
+import DiscoveriesChart from "@/components/charts/DiscoveriesChart.astro";
+import MethodsChart from "@/components/charts/MethodsChart.astro";
+import { HeroSearch } from "@/components/exoplanets/hero-search";
+import PlanetCard from "@/components/exoplanets/PlanetCard.astro";
+import { buttonVariants } from "@/components/ui/button";
+import { catalog, catalogStatistics } from "@/data/catalog";
+import { earthLikeCriteria, featuredPlanets } from "@/data/featured";
+import { detectionMethods } from "@/data/methods";
+import { pages, site } from "@/data/site";
+import { getDiscoveryMethodLabel } from "@/domain/exoplanets/discovery-methods";
+import { filterCatalog } from "@/domain/filters/filter";
+import { defaultCatalogQuery } from "@/domain/filters/query";
+import { formatDate, formatInteger, formatPercent, formatSignificant } from "@/lib/formatting/number";
+import { getCatalogueUrl } from "@/lib/url";
+import Base from "@/layouts/Base.astro";
+
+const { planetCount, systemCount, latestDiscoveryYear, methods, discoveriesByYear } = catalogStatistics;
+const [topMethod] = methods;
+const featured = featuredPlanets.flatMap(({ slug, note }) => {
+    const planet = catalog.findBySlug(slug);
+    return planet ? [{ planet, note }] : [];
+});
+const earthLikeQuery = { ranges: { rayon: earthLikeCriteria.radius, temperature: earthLikeCriteria.temperature } };
+const earthLikeCount = filterCatalog(catalog.entries, { ...defaultCatalogQuery, ...earthLikeQuery }).length;
+const retrievedAt = formatDate(catalog.snapshot.retrievedAt);
+
+const statistics = [
+    { label: "Exoplanètes confirmées", value: formatInteger(planetCount) },
+    { label: "Systèmes planétaires", value: formatInteger(systemCount) },
+    {
+        label: "Méthode la plus représentée",
+        value: topMethod ? getDiscoveryMethodLabel(topMethod.key) : "Non renseignée",
+        detail: topMethod ? `${formatPercent(topMethod.count / planetCount)} des découvertes` : undefined
+    },
+    { label: "Découverte la plus récente", value: latestDiscoveryYear ? String(latestDiscoveryYear) : "Non renseignée" }
+];
+---
+
+<Base title={site.title} description={site.description}>
+    <section class="hero bg-gradient" aria-labelledby="hero-titre">
+        <div class="container-page hero__inner stagger">
+            <p class="eyebrow">{site.name} · {formatInteger(planetCount)} mondes catalogués</p>
+            <h1 id="hero-titre" class="hero__title">Explore les mondes au-delà du Système solaire.</h1>
+            <p class="hero__text">
+                Recherche une exoplanète, filtre le catalogue de la NASA selon ses caractéristiques, compare des mondes
+                entre eux et découvre comment les astronomes parviennent à les détecter.
+            </p>
+            <HeroSearch client:load/>
+            <div class="hero__actions">
+                <a class={buttonVariants({ variant: "outline", size: "lg" })} href={pages.catalogue}>
+                    Parcourir le catalogue
+                    <ArrowRight aria-hidden="true"/>
+                </a>
+                <a class={buttonVariants({ variant: "ghost", size: "lg" })} href={pages.compare}>Comparer des planètes</a>
+            </div>
+        </div>
+    </section>
+
+    <section class="container-page" aria-labelledby="chiffres-titre">
+        <h2 id="chiffres-titre" class="sr-only">Le catalogue en chiffres</h2>
+        <dl class="statistics">
+            {statistics.map(({ label, value, detail }) => (
+                    <div class="statistics__item">
+                        <dt class="statistics__label">{label}</dt>
+                        <dd class="statistics__value">{value}</dd>
+                        {detail && <dd class="statistics__detail">{detail}</dd>}
+                    </div>
+            ))}
+        </dl>
+        <p class="statistics__source">
+            Snapshot du {retrievedAt}, issu de la table {catalog.snapshot.source.table} de la {catalog.snapshot.source.name}.
+        </p>
+    </section>
+
+    <section class="container-page section" aria-labelledby="selection-titre">
+        <header class="section-header">
+            <p class="eyebrow">Sélection</p>
+            <h2 id="selection-titre">Des mondes qui ont marqué l'histoire</h2>
+            <p>Quelques exoplanètes emblématiques, chacune représentative d'une étape ou d'une méthode de détection.</p>
+        </header>
+        <ul class="featured">
+            {featured.map(({ planet, note }) => <li><PlanetCard planet={planet} note={note}/></li>)}
+        </ul>
+    </section>
+
+    <section class="section-sm bg-gradient" aria-labelledby="repartition-titre">
+        <div class="container-page">
+            <header class="section-header">
+                <p class="eyebrow">Le catalogue en un coup d'œil</p>
+                <h2 id="repartition-titre">Trois décennies de découvertes</h2>
+                <p>
+                    Le rythme des découvertes reflète surtout les progrès des instruments : relevés au sol, puis
+                    télescopes spatiaux dédiés comme Kepler et TESS.
+                </p>
+            </header>
+            <div class="overview">
+                <div class="panel">
+                    <h3 class="panel__title">Découvertes par année</h3>
+                    <DiscoveriesChart years={discoveriesByYear}/>
+                </div>
+                <div class="panel">
+                    <h3 class="panel__title">Par méthode de découverte</h3>
+                    <MethodsChart methods={methods} total={planetCount} limit={5}/>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="container-page section" aria-labelledby="terre-titre">
+        <div class="earth-like">
+            <div class="earth-like__content">
+                <p class="eyebrow">Mondes comparables à la Terre</p>
+                <h2 id="terre-titre">{formatInteger(earthLikeCount)} planètes de taille et de température proches de la Terre</h2>
+                <p>
+                    Rayon compris entre {formatSignificant(earthLikeCriteria.radius.min)} et
+                    {formatSignificant(earthLikeCriteria.radius.max)} fois celui de la Terre, et température d'équilibre
+                    entre {earthLikeCriteria.temperature.min} et {earthLikeCriteria.temperature.max} K.
+                </p>
+                <p class="earth-like__notice">
+                    <Info size={18} aria-hidden="true"/>
+                    <span>
+                        Ces critères ne disent rien de l'habitabilité : la température d'équilibre ignore l'atmosphère, et
+                        beaucoup de ces rayons sont estimés plutôt que mesurés. Aucune de ces planètes n'est connue comme
+                        habitable.
+                    </span>
+                </p>
+                <a class={buttonVariants({ size: "lg" })} href={getCatalogueUrl(earthLikeQuery)}>
+                    Explorer ces mondes
+                    <ArrowRight aria-hidden="true"/>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <section class="container-page" aria-labelledby="methodes-titre">
+        <header class="section-header">
+            <p class="eyebrow">Méthodes de détection</p>
+            <h2 id="methodes-titre">Comment trouve-t-on une exoplanète ?</h2>
+            <p>Les exoplanètes sont presque toujours trop faibles pour être vues directement. On les détecte par leurs effets sur leur étoile.</p>
+        </header>
+        <ul class="methods">
+            {detectionMethods.map(({ method, summary }) => (
+                    <li>
+                        <a class="method-link" href={`${pages.methods}#${method}`}>
+                            <span class="method-link__title">
+                                {getDiscoveryMethodLabel(method)}
+                                <ArrowRight size={16} aria-hidden="true"/>
+                            </span>
+                            <span class="method-link__summary">{summary}</span>
+                        </a>
+                    </li>
+            ))}
+        </ul>
+    </section>
+
+    <section class="container-page section-sm" aria-labelledby="auteur-titre">
+        <div class="author">
+            <div>
+                <h2 id="auteur-titre" class="author__title">Un projet de {site.author.name}</h2>
+                <p>ExoScope fait partie des projets personnels présentés sur mon portfolio, entre astrophysique et développement web.</p>
+            </div>
+            <a class={buttonVariants({ variant: "outline", size: "lg" })} href={site.author.url}>
+                Voir le portfolio
+                <ArrowUpRight aria-hidden="true"/>
+            </a>
+        </div>
+    </section>
+</Base>
+
+<style>
+    .hero {
+        padding-block: 4rem 3rem;
+    }
+
+    .hero__inner {
+        display: grid;
+        gap: 1.25rem;
+        max-width: 48rem;
+        text-align: center;
+    }
+
+    .hero__title {
+        font-size: var(--text-h1);
+    }
+
+    .hero__text {
+        font-size: 1.125rem;
+    }
+
+    .hero__actions {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.75rem;
+    }
+
+    .statistics {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+        overflow: hidden;
+        background-color: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+    }
+
+    .statistics__item {
+        display: grid;
+        align-content: start;
+        gap: 0.25rem;
+        padding: 1.5rem;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .statistics__label {
+        font-size: 0.875rem;
+        color: var(--muted-foreground);
+    }
+
+    .statistics__value {
+        font-family: var(--font-heading);
+        font-size: 1.75rem;
+        font-weight: 700;
+        line-height: 1.2;
+        color: var(--foreground);
+        font-variant-numeric: tabular-nums;
+    }
+
+    .statistics__detail {
+        font-size: 0.875rem;
+    }
+
+    .statistics__source {
+        margin-top: 0.75rem;
+        font-size: 0.875rem;
+        color: var(--muted-foreground);
+    }
+
+    @media (min-width: 64rem) {
+        .statistics__item {
+            border-bottom: 0;
+        }
+
+        .statistics__item + .statistics__item {
+            border-left: 1px solid var(--border);
+        }
+    }
+
+    .featured {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
+        gap: 1.25rem;
+    }
+
+    .overview {
+        display: grid;
+        gap: 1.25rem;
+    }
+
+    @media (min-width: 64rem) {
+        .overview {
+            grid-template-columns: 3fr 2fr;
+            align-items: start;
+        }
+    }
+
+    .panel {
+        display: grid;
+        gap: 1.25rem;
+        padding: 1.5rem;
+        background-color: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+    }
+
+    .panel__title {
+        font-size: 1.125rem;
+    }
+
+    .earth-like {
+        padding: 2rem 1.5rem;
+        background-color: var(--brand-soft);
+        border-radius: var(--radius-xl);
+    }
+
+    @media (min-width: 48rem) {
+        .earth-like {
+            padding: 3rem;
+        }
+    }
+
+    .earth-like__content {
+        display: grid;
+        justify-items: start;
+        gap: 1rem;
+        max-width: 44rem;
+    }
+
+    .earth-like__content h2 {
+        font-size: var(--text-h3);
+    }
+
+    .earth-like__notice {
+        display: flex;
+        gap: 0.625rem;
+        font-size: 0.9375rem;
+        color: var(--foreground);
+    }
+
+    .earth-like__notice :global(svg) {
+        flex-shrink: 0;
+        margin-top: 0.2rem;
+        color: var(--brand);
+    }
+
+    .methods {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
+        gap: 1rem;
+    }
+
+    .method-link {
+        display: grid;
+        gap: 0.5rem;
+        height: 100%;
+        padding: 1.25rem 1.5rem;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+        transition: border-color 0.25s ease, background-color 0.25s ease;
+    }
+
+    .method-link:hover {
+        background-color: var(--surface);
+        border-color: color-mix(in srgb, var(--foreground) 25%, transparent);
+    }
+
+    .method-link__title {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-family: var(--font-heading);
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: var(--foreground);
+    }
+
+    .method-link__summary {
+        font-size: 0.9375rem;
+    }
+
+    .author {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1.5rem;
+        padding-top: 2.5rem;
+        border-top: 1px solid var(--border);
+    }
+
+    .author__title {
+        margin-bottom: 0.5rem;
+        font-size: 1.5rem;
+    }
+</style>

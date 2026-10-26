@@ -1,0 +1,131 @@
+---
+import { ArrowUpRight } from "lucide-react";
+import { Measurement } from "@/components/exoplanets/measurement";
+import { MethodBadge } from "@/components/exoplanets/method-badge";
+import { getPlanetPath } from "@/data/site";
+import type { Exoplanet } from "@/domain/exoplanets/model";
+import { summaryProperties } from "@/domain/exoplanets/properties";
+import { formatPlanetProperty } from "@/lib/formatting/measurement";
+
+interface Props {
+    planet: Exoplanet;
+    note?: string;
+    headingLevel?: "h2" | "h3";
+}
+
+const { planet, note, headingLevel: Heading = "h3" } = Astro.props;
+const facts = (["radius", "mass", "distance"] as const).map((key) => ({
+    label: summaryProperties[key].label,
+    measurement: formatPlanetProperty(planet, summaryProperties[key])
+}));
+---
+
+<article class="planet-card">
+    <div class="planet-card__header">
+        <Heading class="planet-card__title">
+            <a class="planet-card__link" href={getPlanetPath(planet.slug)}>{planet.name}</a>
+        </Heading>
+        <ArrowUpRight className="planet-card__icon" size={18} aria-hidden="true"/>
+    </div>
+    <p class="planet-card__host">
+        {planet.hostStarName ? `Étoile hôte : ${planet.hostStarName}` : "Étoile hôte non renseignée"}
+        {planet.discoveryYear && ` · ${planet.discoveryYear}`}
+    </p>
+    <MethodBadge method={planet.discoveryMethod}/>
+    {note && <p class="planet-card__note">{note}</p>}
+    <dl class="planet-card__facts">
+        {facts.map(({ label, measurement }) => (
+                <div class="planet-card__fact">
+                    <dt>{label}</dt>
+                    <dd><Measurement measurement={measurement}/></dd>
+                </div>
+        ))}
+    </dl>
+</article>
+
+<style>
+    .planet-card {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+        height: 100%;
+        padding: 1.5rem;
+        background-color: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-xl);
+        transition: border-color 0.25s ease, translate 0.25s var(--ease-out), box-shadow 0.25s ease;
+    }
+
+    .planet-card:hover,
+    .planet-card:focus-within {
+        border-color: color-mix(in srgb, var(--foreground) 25%, transparent);
+        box-shadow: 0 0.75rem 2rem -1.5rem rgb(0 0 0 / 0.35);
+        translate: 0 -2px;
+    }
+
+    .planet-card__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        width: 100%;
+    }
+
+    .planet-card__title {
+        font-size: 1.25rem;
+    }
+
+    .planet-card__link::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+    }
+
+    .planet-card__link:focus-visible {
+        outline: none;
+    }
+
+    .planet-card:has(.planet-card__link:focus-visible) {
+        outline: 2px solid var(--ring);
+        outline-offset: 3px;
+    }
+
+    .planet-card :global(.planet-card__icon) {
+        flex-shrink: 0;
+        color: var(--muted-foreground);
+    }
+
+    .planet-card__host {
+        font-size: 0.875rem;
+        color: var(--muted-foreground);
+    }
+
+    .planet-card__note {
+        font-size: 0.9375rem;
+    }
+
+    .planet-card__facts {
+        display: grid;
+        gap: 0.375rem;
+        width: 100%;
+        margin-top: auto;
+        padding-top: 0.75rem;
+        font-size: 0.875rem;
+        border-top: 1px solid var(--border);
+    }
+
+    .planet-card__fact {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+    }
+
+    .planet-card__fact dd {
+        font-weight: 600;
+        color: var(--foreground);
+        text-align: right;
+    }
+</style>

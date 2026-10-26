@@ -1,0 +1,54 @@
+---
+import { CatalogueExplorer } from "@/components/exoplanets/catalogue-explorer";
+import { catalog, catalogRangeBounds } from "@/data/catalog";
+import { site } from "@/data/site";
+import { runCatalogQuery } from "@/domain/filters/filter";
+import { defaultCatalogQuery, parseCatalogQuery } from "@/domain/filters/query";
+import { cachePolicies } from "@/lib/cache/policies";
+import { formatDate, formatInteger } from "@/lib/formatting/number";
+import Base from "@/layouts/Base.astro";
+
+export const prerender = false;
+
+const result = parseCatalogQuery(Astro.url.searchParams);
+const query = result.success ? result.query : defaultCatalogQuery;
+const page = runCatalogQuery(catalog.entries, query);
+Astro.response.headers.set("Cache-Control", cachePolicies.listing);
+
+const title = `Catalogue des exoplanètes | ${site.name}`;
+const description = `Recherche et filtre ${formatInteger(catalog.snapshot.planets.length)} exoplanètes confirmées selon leur méthode de découverte, leur masse, leur rayon, leur période orbitale ou leur distance.`;
+---
+
+<Base title={title} description={description}>
+    <div class="container-page catalogue">
+        <header class="catalogue__header stagger">
+            <p class="eyebrow">Catalogue</p>
+            <h1>Explorer le catalogue</h1>
+            <p>
+                {formatInteger(catalog.snapshot.planets.length)} exoplanètes confirmées, d'après la NASA Exoplanet Archive
+                (snapshot du {formatDate(catalog.snapshot.retrievedAt)}). Les valeurs estimées, minimales ou calculées
+                sont signalées à côté de chaque donnée.
+            </p>
+        </header>
+        <CatalogueExplorer client:load initialQuery={query} initialPage={page} bounds={catalogRangeBounds}
+                           invalidParameters={result.success ? null : result.error}/>
+    </div>
+</Base>
+
+<style>
+    .catalogue {
+        display: grid;
+        gap: 2.5rem;
+        padding-top: 3rem;
+    }
+
+    .catalogue__header {
+        display: grid;
+        gap: 0.75rem;
+        max-width: 48rem;
+    }
+
+    .catalogue__header h1 {
+        font-size: var(--text-h2);
+    }
+</style>

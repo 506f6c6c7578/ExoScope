@@ -1,0 +1,219 @@
+---
+import { ArrowRight, Check, Minus } from "lucide-react";
+import MethodDiagram from "@/components/exoplanets/MethodDiagram.astro";
+import { buttonVariants } from "@/components/ui/button";
+import { catalog, catalogStatistics } from "@/data/catalog";
+import { detectionMethods } from "@/data/methods";
+import { getPlanetPath, site } from "@/data/site";
+import { getDiscoveryMethodLabel } from "@/domain/exoplanets/discovery-methods";
+import { countByMethod } from "@/domain/exoplanets/statistics";
+import { formatCount, formatPercent } from "@/lib/formatting/number";
+import { getCatalogueUrl } from "@/lib/url";
+import Base from "@/layouts/Base.astro";
+
+const { planetCount } = catalogStatistics;
+const methods = detectionMethods.map((entry) => ({
+    ...entry,
+    label: getDiscoveryMethodLabel(entry.method),
+    count: countByMethod(catalogStatistics, entry.method),
+    examples: catalog.findAll(entry.examples)
+}));
+---
+
+<Base title={`Méthodes de détection | ${site.name}`}
+      description="Transit, vitesse radiale, imagerie directe, microlentille, astrométrie et variations du temps de transit : comment les astronomes détectent les exoplanètes.">
+    <div class="container-page methods-page">
+        <header class="methods-page__header stagger">
+            <p class="eyebrow">Méthodes de détection</p>
+            <h1>Comment détecte-t-on une exoplanète ?</h1>
+            <p>
+                Une exoplanète est des millions de fois moins lumineuse que son étoile, et presque toujours trop proche
+                d'elle pour être vue séparément. Les astronomes la repèrent donc le plus souvent de manière indirecte, par
+                ses effets sur la lumière ou le mouvement de l'étoile. Chaque méthode a ses biais : ensemble, elles
+                dessinent une image encore incomplète des systèmes planétaires.
+            </p>
+            <nav aria-label="Sommaire des méthodes">
+                <ul class="toc">
+                    {methods.map(({ method, label }) => <li><a href={`#${method}`}>{label}</a></li>)}
+                </ul>
+            </nav>
+        </header>
+
+        {methods.map(({ method, label, count, summary, details, strengths, limits, examples }, index) => (
+                <section id={method} class:list={["method", { "method--reversed": index % 2 === 1 }]} aria-labelledby={`${method}-titre`}>
+                    <figure class="method__figure reveal">
+                        <MethodDiagram method={method}/>
+                    </figure>
+                    <div class="method__content">
+                        <p class="eyebrow">{formatCount(count, "planète découverte", "planètes découvertes")} · {formatPercent(count / planetCount)} du catalogue</p>
+                        <h2 id={`${method}-titre`}>{label}</h2>
+                        <p class="method__summary">{summary}</p>
+                        <p>{details}</p>
+                        <div class="method__lists">
+                            <div>
+                                <h3>Forces</h3>
+                                <ul class="method__list">
+                                    {strengths.map((item) => <li><Check size={16} aria-hidden="true"/>{item}</li>)}
+                                </ul>
+                            </div>
+                            <div>
+                                <h3>Limites</h3>
+                                <ul class="method__list method__list--limits">
+                                    {limits.map((item) => <li><Minus size={16} aria-hidden="true"/>{item}</li>)}
+                                </ul>
+                            </div>
+                        </div>
+                        {examples.length > 0 && (
+                                <div class="method__examples">
+                                    <h3>Exemples du catalogue</h3>
+                                    <ul>
+                                        {examples.map((planet) => (
+                                                <li><a href={getPlanetPath(planet.slug)}>{planet.name}{planet.discoveryYear && ` (${planet.discoveryYear})`}</a></li>
+                                        ))}
+                                    </ul>
+                                </div>
+                        )}
+                        <a class={buttonVariants({ variant: "outline", size: "lg" })} href={getCatalogueUrl({ methods: [method] })}>
+                            Voir les planètes découvertes par {label.toLowerCase()}
+                            <ArrowRight aria-hidden="true"/>
+                        </a>
+                    </div>
+                </section>
+        ))}
+    </div>
+</Base>
+
+<style>
+    .methods-page {
+        display: grid;
+        gap: 4rem;
+        padding-top: 3rem;
+    }
+
+    .methods-page__header {
+        display: grid;
+        gap: 1rem;
+        max-width: 48rem;
+    }
+
+    .methods-page__header h1 {
+        font-size: var(--text-h2);
+    }
+
+    .toc {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
+
+    .toc a {
+        display: inline-flex;
+        padding: 0.375rem 0.875rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--foreground);
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        transition: background-color 0.2s ease;
+    }
+
+    .toc a:hover {
+        background-color: var(--accent);
+    }
+
+    .method {
+        display: grid;
+        gap: 2rem;
+        align-items: center;
+        padding-top: 3rem;
+        border-top: 1px solid var(--border);
+    }
+
+    @media (min-width: 64rem) {
+        .method {
+            grid-template-columns: 5fr 7fr;
+            gap: 4rem;
+        }
+
+        .method--reversed {
+            grid-template-columns: 7fr 5fr;
+        }
+
+        .method--reversed .method__figure {
+            order: 2;
+        }
+    }
+
+    .method__figure {
+        padding: 1.5rem;
+        background-color: var(--surface);
+        border-radius: var(--radius-xl);
+    }
+
+    .method__content {
+        display: grid;
+        justify-items: start;
+        gap: 1rem;
+    }
+
+    .method__content h2 {
+        font-size: var(--text-h3);
+    }
+
+    .method__content h3 {
+        margin-bottom: 0.5rem;
+        font-size: 1rem;
+    }
+
+    .method__summary {
+        font-size: 1.125rem;
+        color: var(--foreground);
+    }
+
+    .method__lists {
+        display: grid;
+        gap: 1.25rem;
+        width: 100%;
+    }
+
+    @media (min-width: 48rem) {
+        .method__lists {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+
+    .method__list {
+        display: grid;
+        gap: 0.5rem;
+        font-size: 0.9375rem;
+    }
+
+    .method__list li {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .method__list :global(svg) {
+        flex-shrink: 0;
+        margin-top: 0.25rem;
+        color: var(--brand);
+    }
+
+    .method__list--limits :global(svg) {
+        color: var(--muted-foreground);
+    }
+
+    .method__examples ul {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem 1.25rem;
+    }
+
+    .method__examples a {
+        font-weight: 600;
+        color: var(--foreground);
+        text-decoration: underline;
+        text-underline-offset: 0.25rem;
+    }
+</style>

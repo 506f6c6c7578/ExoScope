@@ -1,0 +1,105 @@
+---
+import { contactFormLink, type LegalDocument } from "@/data/legal";
+import { legalLinks, site } from "@/data/site";
+import { comparisonLimits } from "@/domain/comparison/selection";
+import Legal from "@/layouts/Legal.astro";
+
+const privacyPolicy: LegalDocument = {
+    link: legalLinks.privacy,
+    description: `Politique de confidentialité de ${site.name} : données traitées, finalités, durées de conservation et droits.`,
+    updatedAt: "2026-10-26",
+    sections: [
+        {
+            title: "Responsable du traitement",
+            blocks: [
+                [`Le responsable du traitement des données traitées sur ce site est ${site.author.name}, que tu peux joindre via le `, contactFormLink, "."],
+                "Ce site ne nécessite aucun compte et ne contient ni publicité, ni outil de mesure d'audience, ni traceur publicitaire. Aucune donnée n'est vendue ni utilisée à des fins commerciales."
+            ]
+        },
+        {
+            title: "Recherches, filtres et comparaisons",
+            blocks: [
+                "Pour afficher les résultats, le site traite uniquement les informations que tu lui fournis :",
+                {
+                    items: [
+                        "Le texte saisi dans les champs de recherche",
+                        "Les filtres, le tri et la page du catalogue, qui figurent dans l'adresse de la page",
+                        "Les identifiants des planètes comparées, qui figurent dans l'adresse du comparateur"
+                    ]
+                },
+                "Le serveur s'en sert uniquement pour interroger sa copie locale du catalogue et te renvoyer les résultats. Aucun appel n'est fait à un service tiers pendant ta visite, et ces informations ne sont enregistrées dans aucune base de données.",
+                "Ce traitement repose sur mon intérêt légitime à te fournir le service que tu demandes (article 6.1.f du RGPD)."
+            ]
+        },
+        {
+            title: "Journaux techniques",
+            blocks: [
+                "À chaque requête, le serveur enregistre des journaux techniques : adresse IP, date et heure, page demandée avec ses paramètres, code de réponse et navigateur utilisé.",
+                "Ces journaux servent uniquement à assurer la sécurité et le bon fonctionnement du site, notamment à limiter les requêtes abusives. Ils sont conservés sur une durée limitée, puis supprimés automatiquement par rotation. Ce traitement repose sur mon intérêt légitime à sécuriser le site (article 6.1.f du RGPD).",
+                "Cloudflare, qui achemine et protège le trafic du site, traite également ces données techniques."
+            ]
+        },
+        {
+            title: "Cookies et stockage local",
+            blocks: [
+                "Ce site ne dépose aucun cookie de mesure d'audience ni de publicité.",
+                "Certaines préférences sont enregistrées dans le stockage local de ton navigateur, uniquement lorsque tu les choisis :",
+                {
+                    items: [
+                        "Ton thème clair ou sombre",
+                        `Ta liste de comparaison, ${comparisonLimits.max} planètes au maximum`
+                    ]
+                },
+                "Ces données ne sont jamais transmises. Tu peux les supprimer à tout moment en vidant le comparateur, ou depuis les réglages de ton navigateur.",
+                "Cloudflare peut déposer des cookies strictement nécessaires à la sécurité du site. Ces éléments sont exemptés de consentement, c'est pourquoi aucun bandeau ne t'est présenté."
+            ]
+        },
+        {
+            title: "Destinataires et transferts",
+            blocks: [
+                "Tes données ne sont accessibles qu'à moi et aux prestataires techniques strictement nécessaires :",
+                {
+                    items: [
+                        "OVHcloud, hébergeur du site, en France",
+                        "Cloudflare, pour la diffusion et la protection du site, aux États-Unis"
+                    ]
+                },
+                "Les transferts vers les États-Unis sont encadrés par le Data Privacy Framework UE-États-Unis ou par les clauses contractuelles types de la Commission européenne.",
+                ["Pour en savoir plus, consulte la politique de confidentialité de ", { label: "Cloudflare", href: "https://www.cloudflare.com/privacypolicy/" }, "."]
+            ]
+        },
+        {
+            title: "Sécurité",
+            blocks: [
+                "Les échanges avec le site sont chiffrés en HTTPS et l'infrastructure applique le principe du moindre privilège. Aucun système n'étant infaillible, une sécurité absolue ne peut toutefois pas être garantie."
+            ]
+        },
+        {
+            title: "Tes droits",
+            blocks: [
+                "Conformément au RGPD et à la loi Informatique et Libertés, tu disposes sur tes données des droits suivants :",
+                {
+                    items: [
+                        "Droit d'accès",
+                        "Droit de rectification",
+                        "Droit à l'effacement",
+                        "Droit à la limitation du traitement",
+                        "Droit d'opposition",
+                        "Droit de définir des directives sur le sort de tes données après ton décès"
+                    ]
+                },
+                ["Pour les exercer, écris-moi via le ", contactFormLink, ". Je te réponds dans un délai d'un mois au plus."],
+                ["Si tu estimes, après m'avoir contacté, que tes droits ne sont pas respectés, tu peux adresser une réclamation à la ", { label: "CNIL", href: "https://www.cnil.fr/fr/adresser-une-plainte" }, "."]
+            ]
+        },
+        {
+            title: "Modifications",
+            blocks: [
+                "Cette politique peut évoluer, notamment en cas de changement de prestataire. La date de sa dernière mise à jour figure en haut de cette page."
+            ]
+        }
+    ]
+};
+---
+
+<Legal {...privacyPolicy}/>

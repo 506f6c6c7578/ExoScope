@@ -1,0 +1,231 @@
+---
+import { ArrowUpRight, ChevronDown } from "lucide-react";
+import { buttonVariants } from "@/components/ui/button";
+import { catalog } from "@/data/catalog";
+import { legalLinks, site } from "@/data/site";
+import { formatDate, formatInteger } from "@/lib/formatting/number";
+import { archiveDocumentationUrl } from "@/services/exoplanet-archive/links";
+import Base from "@/layouts/Base.astro";
+
+const { source, retrievedAt, schemaVersion, planets } = catalog.snapshot;
+
+const limits = [
+    {
+        title: "Une table composite, pas une source unique",
+        content: "La table des paramètres composites (PSCompPars) rassemble, pour chaque planète, les valeurs jugées les plus fiables, parfois issues de publications différentes. L'ensemble n'est donc pas toujours physiquement cohérent : un rayon et une masse peuvent provenir de deux études distinctes."
+    },
+    {
+        title: "Des valeurs estimées, calculées ou minimales",
+        content: "Lorsqu'une donnée manque, l'archive la complète parfois par une relation empirique masse-rayon ou par un calcul à partir d'autres paramètres. ExoScope signale ces valeurs, ainsi que les masses minimales (M sin i) et les limites publiées. Une valeur absente est affichée « Non renseigné » : rien n'est jamais inventé."
+    },
+    {
+        title: "Des incertitudes non affichées",
+        content: "Chaque mesure publiée comporte une marge d'erreur, parfois importante. Pour rester lisible, ExoScope affiche des valeurs centrales arrondies à trois chiffres significatifs : consulte la fiche de l'archive pour les incertitudes complètes."
+    },
+    {
+        title: "Des biais de détection",
+        content: "Les méthodes actuelles favorisent les planètes massives, grandes ou proches de leur étoile. La répartition du catalogue reflète donc ce que l'on sait détecter, pas la population réelle des exoplanètes de la Galaxie."
+    },
+    {
+        title: "Température d'équilibre et habitabilité",
+        content: "La température d'équilibre suppose une planète sans atmosphère, souvent avec un albédo nul. Elle peut différer fortement de la température de surface. Une taille et une température proches de celles de la Terre ne suffisent pas à rendre une planète habitable, et aucune exoplanète n'est aujourd'hui connue comme telle."
+    },
+    {
+        title: "Un instantané daté",
+        content: "Le catalogue évolue au fil des publications. ExoScope s'appuie sur un snapshot validé, mis à jour manuellement : de nouvelles découvertes ou des valeurs révisées peuvent ne pas encore y figurer."
+    }
+];
+---
+
+<Base title={`À propos | ${site.name}`} description="Objectif pédagogique, source des données, limites scientifiques et confidentialité d'ExoScope.">
+    <article class="container-page about">
+        <header class="about__header stagger">
+            <p class="eyebrow">À propos</p>
+            <h1>Un explorateur pédagogique et prudent</h1>
+            <p>
+                ExoScope rend le catalogue des exoplanètes confirmées accessible à tous : rechercher un monde, le situer
+                parmi les autres, comprendre comment il a été découvert, et surtout savoir ce que l'on ignore encore à son
+                sujet.
+            </p>
+        </header>
+
+        <section class="about__section" aria-labelledby="source-titre">
+            <h2 id="source-titre">Source des données</h2>
+            <p>
+                Les données proviennent de la <a href={source.url}>{source.name}</a>, exploitée par le California Institute
+                of Technology pour la NASA. ExoScope utilise la table
+                <a href={archiveDocumentationUrl}>{source.table}</a>, qui fournit une ligne par planète confirmée.
+            </p>
+            <dl class="about__facts">
+                <div><dt>Planètes dans le snapshot</dt><dd>{formatInteger(planets.length)}</dd></div>
+                <div><dt>Date de mise à jour</dt><dd>{formatDate(retrievedAt)}</dd></div>
+                <div><dt>Version du schéma</dt><dd>{schemaVersion}</dd></div>
+            </dl>
+            <p>
+                Un script contrôlé interroge l'archive avec une requête fixe, valide chaque ligne, normalise les unités et
+                ne remplace le snapshot que si le résultat est complet et cohérent. Le site ne contacte jamais l'archive
+                pendant ta visite : il consulte uniquement ce snapshot local.
+            </p>
+            <blockquote class="about__quote" lang="en">
+                This research has made use of the NASA Exoplanet Archive, which is operated by the California Institute of
+                Technology, under contract with the National Aeronautics and Space Administration under the Exoplanet
+                Exploration Program.
+            </blockquote>
+        </section>
+
+        <section class="about__section" aria-labelledby="limites-titre">
+            <h2 id="limites-titre">Limites et incertitudes</h2>
+            <div class="limits">
+                {limits.map(({ title, content }) => (
+                        <details class="limit">
+                            <summary>
+                                {title}
+                                <ChevronDown className="limit__icon" size={18} aria-hidden="true"/>
+                            </summary>
+                            <p>{content}</p>
+                        </details>
+                ))}
+            </div>
+        </section>
+
+        <section class="about__section" aria-labelledby="confidentialite-titre">
+            <h2 id="confidentialite-titre">Confidentialité</h2>
+            <p>
+                ExoScope ne dépose aucun cookie, n'utilise aucun outil de mesure d'audience ni aucun service tiers, et ne
+                propose pas de compte. Ton choix de thème et ta liste de comparaison restent dans ton navigateur. Le site
+                demande également aux moteurs de recherche de ne pas l'indexer.
+            </p>
+            <p>
+                Le détail figure dans la <a href={legalLinks.privacy.href}>{legalLinks.privacy.label.toLowerCase()}</a> et
+                les <a href={legalLinks.notice.href}>{legalLinks.notice.label.toLowerCase()}</a>.
+            </p>
+        </section>
+
+        <section class="about__section" aria-labelledby="auteur-titre">
+            <h2 id="auteur-titre">Auteur et code source</h2>
+            <p>
+                ExoScope est un projet personnel de {site.author.name}, passionné d'astrophysique et de développement web.
+                Le code source est public : tu peux y consulter la chaîne de traitement des données et les choix techniques.
+            </p>
+            <div class="about__links">
+                <a class={buttonVariants({ size: "lg" })} href={site.author.url}>
+                    Voir le portfolio
+                    <ArrowUpRight aria-hidden="true"/>
+                </a>
+                <a class={buttonVariants({ variant: "outline", size: "lg" })} href={site.repository} target="_blank" rel="noopener noreferrer">
+                    Code source sur GitHub
+                    <ArrowUpRight aria-hidden="true"/>
+                </a>
+            </div>
+        </section>
+    </article>
+</Base>
+
+<style>
+    .about {
+        display: grid;
+        gap: 3.5rem;
+        max-width: 52rem !important;
+        padding-top: 3rem;
+    }
+
+    .about__header {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .about__header h1 {
+        font-size: var(--text-h2);
+    }
+
+    .about__header p {
+        font-size: 1.125rem;
+    }
+
+    .about__section {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .about__section h2 {
+        font-size: 1.75rem;
+    }
+
+    .about__section a:not([class]) {
+        font-weight: 600;
+        color: var(--foreground);
+        text-decoration: underline;
+        text-underline-offset: 0.25rem;
+    }
+
+    .about__facts {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+        gap: 1rem;
+        padding: 1.25rem 1.5rem;
+        background-color: var(--surface);
+        border-radius: var(--radius-xl);
+    }
+
+    .about__facts dt {
+        font-size: 0.875rem;
+        color: var(--muted-foreground);
+    }
+
+    .about__facts dd {
+        font-family: var(--font-heading);
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--foreground);
+    }
+
+    .about__quote {
+        padding-left: 1rem;
+        font-size: 0.9375rem;
+        font-style: italic;
+        border-left: 3px solid var(--brand);
+    }
+
+    .limits {
+        display: grid;
+        border-top: 1px solid var(--border);
+    }
+
+    .limit {
+        border-bottom: 1px solid var(--border);
+    }
+
+    .limit summary {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        padding-block: 1rem;
+        font-weight: 600;
+        color: var(--foreground);
+        list-style: none;
+    }
+
+    .limit summary::-webkit-details-marker {
+        display: none;
+    }
+
+    .limit summary :global(.limit__icon) {
+        flex-shrink: 0;
+        transition: rotate 0.25s var(--ease-out);
+    }
+
+    .limit[open] summary :global(.limit__icon) {
+        rotate: 180deg;
+    }
+
+    .limit p {
+        padding-bottom: 1rem;
+    }
+
+    .about__links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+</style>

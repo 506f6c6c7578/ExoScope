@@ -1,0 +1,170 @@
+---
+import { Measurement } from "@/components/exoplanets/measurement";
+import { getConstellationName } from "@/data/constellations";
+import { computeDensity } from "@/domain/exoplanets/density";
+import { getDiscoveryMethodLabel } from "@/domain/exoplanets/discovery-methods";
+import type { Exoplanet } from "@/domain/exoplanets/model";
+import { type PlanetPropertyKey, planetProperties } from "@/domain/exoplanets/properties";
+import { type FormattedMeasurement, formatMeasurement, formatPlanetProperty, notAvailable } from "@/lib/formatting/measurement";
+
+interface Props {
+    planet: Exoplanet;
+}
+
+interface Fact {
+    label: string;
+    measurement: FormattedMeasurement;
+    secondary?: string;
+    note?: string;
+}
+
+const { planet } = Astro.props;
+
+const property = (key: PlanetPropertyKey, label?: string): Fact => ({
+    label: label ?? planetProperties[key].label,
+    measurement: formatPlanetProperty(planet, planetProperties[key])
+});
+
+const withSecondary = (fact: Fact, key: PlanetPropertyKey): Fact => {
+    const secondary = formatPlanetProperty(planet, planetProperties[key]);
+    return secondary.known ? { ...fact, secondary: secondary.text } : fact;
+};
+
+const text = (label: string, value: string | null, note?: string): Fact => ({
+    label,
+    measurement: { text: value ?? notAvailable, origin: null, known: value !== null },
+    note
+});
+
+const density = computeDensity(planet);
+const densityFact: Fact = density
+    ? {
+        label: "Densité",
+        measurement: formatMeasurement(density.gramsPerCubicCentimeter, density.isMinimum ? "minimum" : "calculated", {
+            format: "significant",
+            unit: "g/cm³"
+        }),
+        note: "Calculée à partir de la masse et du rayon publiés."
+    }
+    : {
+        label: "Densité",
+        measurement: { text: "Non calculée", origin: null, known: false },
+        note: "Nécessite une masse et un rayon mesurés, et non estimés."
+    };
+
+const groups: { title: string; facts: Fact[] }[] = [
+    {
+        title: "Planète",
+        facts: [
+            withSecondary(property("mass"), "massJupiter"),
+            withSecondary(property("radius"), "radiusJupiter"),
+            densityFact,
+            property("equilibriumTemperature")
+        ]
+    },
+    {
+        title: "Orbite",
+        facts: [property("orbitalPeriod"), property("semiMajorAxis"), property("eccentricity")]
+    },
+    {
+        title: "Étoile et système",
+        facts: [
+            text("Étoile hôte", planet.hostStarName),
+            property("stellarTemperature", "Température effective"),
+            property("stellarRadius", "Rayon stellaire"),
+            property("systemPlanetCount", "Planètes connues dans le système"),
+            withSecondary(property("distance", "Distance au Soleil"), "distanceParsecs"),
+            text("Constellation", planet.constellation ? getConstellationName(planet.constellation) : null,
+                planet.constellation ? "Déterminée à partir des coordonnées de l'étoile." : undefined)
+        ]
+    },
+    {
+        title: "Découverte",
+        facts: [
+            property("discoveryYear", "Année"),
+            text("Méthode", planet.discoveryMethod ? getDiscoveryMethodLabel(planet.discoveryMethod) : null),
+            text("Installation", planet.discoveryFacility)
+        ]
+    }
+];
+---
+
+<div class="facts">
+    {groups.map(({ title, facts }) => (
+            <section class="facts__group" aria-label={title}>
+                <h3 class="facts__title">{title}</h3>
+                <dl class="facts__list">
+                    {facts.map(({ label, measurement, secondary, note }) => (
+                            <div class="facts__row">
+                                <dt>
+                                    {label}
+                                    {note && <span class="facts__note">{note}</span>}
+                                </dt>
+                                <dd class="facts__value">
+                                    <Measurement measurement={measurement}/>
+                                    {secondary && <span class="facts__secondary">{secondary}</span>}
+                                </dd>
+                            </div>
+                    ))}
+                </dl>
+            </section>
+    ))}
+</div>
+
+<style>
+    .facts {
+        display: grid;
+        gap: 2rem;
+    }
+
+    @media (min-width: 48rem) {
+        .facts {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 2rem 2.5rem;
+        }
+    }
+
+    .facts__title {
+        margin-bottom: 0.5rem;
+        font-size: 1rem;
+        color: var(--brand);
+    }
+
+    .facts__list {
+        display: grid;
+    }
+
+    .facts__row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 1rem;
+        padding-block: 0.625rem;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .facts__row:last-child {
+        border-bottom: 0;
+    }
+
+    .facts__note {
+        display: block;
+        font-size: 0.75rem;
+        color: var(--muted-foreground);
+    }
+
+    .facts__value {
+        display: grid;
+        justify-items: end;
+        font-weight: 600;
+        color: var(--foreground);
+        text-align: right;
+    }
+
+    .facts__secondary {
+        font-size: 0.8125rem;
+        font-weight: 400;
+        color: var(--muted-foreground);
+        font-variant-numeric: tabular-nums;
+    }
+</style>

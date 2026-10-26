@@ -1,0 +1,49 @@
+name: exoscope
+
+x-build: &build
+  context: .
+
+x-hardening: &hardening
+  restart: unless-stopped
+  read_only: true
+  tmpfs:
+    - /tmp:size=16m,mode=1777
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  logging:
+    driver: local
+    options:
+      max-size: 10m
+      max-file: "3"
+
+services:
+  exoscope:
+    <<: *hardening
+    build:
+      <<: *build
+      target: web
+    expose:
+      - "8080"
+    depends_on:
+      app:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 64M
+
+  app:
+    <<: *hardening
+    build:
+      <<: *build
+      target: app
+    expose:
+      - "4321"
+    deploy:
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 256M

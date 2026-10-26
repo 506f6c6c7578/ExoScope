@@ -1,0 +1,176 @@
+---
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { comparisonReferences } from "@/data/solar-system";
+import { decadeTicks, logPosition } from "@/domain/charts/scale";
+import type { Exoplanet } from "@/domain/exoplanets/model";
+import { summaryProperties } from "@/domain/exoplanets/properties";
+import { formatMeasurement, formatPlanetProperty } from "@/lib/formatting/measurement";
+import { formatSignificant } from "@/lib/formatting/number";
+
+interface Props {
+    planet: Exoplanet;
+}
+
+const { planet } = Astro.props;
+
+const quantities = [
+    { key: "radius", reference: "radiusEarth" },
+    { key: "mass", reference: "massEarth" }
+] as const;
+
+const width = 400;
+const rowHeight = 30;
+const margin = { left: 104, right: 40, top: 8 };
+const plotWidth = width - margin.left - margin.right;
+
+const charts = quantities.map(({ key, reference }) => {
+    const property = summaryProperties[key];
+    const value = property.read(planet);
+    const rows = [
+        ...comparisonReferences.map((body) => ({ name: body.name, value: body[reference], highlighted: false })),
+        ...(value === null ? [] : [{ name: planet.name, value, highlighted: true }])
+    ].sort((first, second) => first.value - second.value);
+    const values = rows.map((row) => row.value);
+    const min = 10 ** Math.floor(Math.log10(Math.min(...values)));
+    const max = 10 ** Math.ceil(Math.log10(Math.max(...values)));
+    const xOf = (current: number) => margin.left + logPosition(current, min, max) * plotWidth;
+    const height = margin.top + rows.length * rowHeight + 28;
+    return {
+        key,
+        property,
+        known: value !== null,
+        measurement: formatPlanetProperty(planet, property),
+        rows: rows.map((row, index) => ({ ...row, x: xOf(row.value), y: margin.top + index * rowHeight + rowHeight / 2 })),
+        ticks: decadeTicks(min, max).map((tick) => ({ tick, x: xOf(tick) })),
+        height,
+        axisY: height - 22
+    };
+});
+---
+
+<div class="solar">
+    {charts.map(({ key, property, known, measurement, rows, ticks, height, axisY }) => (
+            <figure class="solar__figure">
+                <figcaption class="solar__caption">
+                    <span class="solar__title">{property.label} ({property.unitName})</span>
+                    <span class="solar__note">Échelle logarithmique : chaque graduation multiplie la valeur par 10.</span>
+                </figcaption>
+                {known ? (
+                        <svg class="solar__svg" viewBox={`0 0 ${width} ${height}`} role="img" aria-labelledby={`solaire-${key}-titre`}>
+                            <title id={`solaire-${key}-titre`}>
+                                {property.label} : {planet.name} ({measurement.text}) face à la Terre, Neptune et Jupiter
+                            </title>
+                            {ticks.map(({ tick, x }) => (
+                                    <g>
+                                        <line class="solar__grid" x1={x} x2={x} y1={margin.top} y2={axisY}/>
+                                        <text class="solar__tick" x={x} y={height - 6} text-anchor="middle">{formatSignificant(tick)}</text>
+                                    </g>
+                            ))}
+                            {rows.map(({ name, value, highlighted, x, y }) => (
+                                    <g class:list={["solar__row", { "solar__row--highlighted": highlighted }]}>
+                                        <text class="solar__name" x={margin.left - 12} y={y + 4} text-anchor="end">{name}</text>
+                                        <line class="solar__track" x1={margin.left} x2={x} y1={y} y2={y}/>
+                                        <circle class="solar__dot" cx={x} cy={y} r={highlighted ? 7 : 5}/>
+                                        <text class="solar__value" x={x + 12} y={y + 4}>{formatSignificant(value)}</text>
+                                    </g>
+                            ))}
+                        </svg>
+                ) : (
+                        <p class="solar__missing">
+                            Donnée non renseignée pour {planet.name} : la comparaison n'est pas possible.
+                        </p>
+                )}
+                <Table className="sr-only">
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead scope="col">Corps</TableHead>
+                            <TableHead scope="col">{property.label} ({property.unitName})</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {rows.map(({ name, value, highlighted }) => (
+                                <TableRow>
+                                    <TableHead scope="row">{name}</TableHead>
+                                    <TableCell>{highlighted ? measurement.text : formatMeasurement(value, null, property).text}</TableCell>
+                                </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </figure>
+    ))}
+</div>
+
+<style>
+    .solar {
+        display: grid;
+        gap: 2rem;
+    }
+
+    .solar__figure {
+        display: grid;
+        gap: 0.75rem;
+    }
+
+    .solar__caption {
+        display: grid;
+        gap: 0.125rem;
+    }
+
+    .solar__title {
+        font-weight: 600;
+        color: var(--foreground);
+    }
+
+    .solar__note,
+    .solar__missing {
+        font-size: 0.875rem;
+        color: var(--muted-foreground);
+    }
+
+    .solar__svg {
+        width: 100%;
+        height: auto;
+        overflow: visible;
+    }
+
+    .solar__grid {
+        stroke: var(--chart-grid);
+    }
+
+    .solar__tick,
+    .solar__value {
+        font-size: 12px;
+        fill: var(--muted-foreground);
+        font-variant-numeric: tabular-nums;
+    }
+
+    .solar__name {
+        font-size: 13px;
+        fill: var(--text);
+    }
+
+    .solar__track {
+        stroke: var(--chart-muted);
+        stroke-width: 2;
+        stroke-dasharray: 2 4;
+    }
+
+    .solar__dot {
+        fill: var(--chart-reference);
+    }
+
+    .solar__row--highlighted .solar__dot {
+        fill: var(--chart-brand);
+    }
+
+    .solar__row--highlighted .solar__name,
+    .solar__row--highlighted .solar__value {
+        font-weight: 700;
+        fill: var(--foreground);
+    }
+
+    .solar__row--highlighted .solar__track {
+        stroke: var(--chart-brand);
+        stroke-dasharray: none;
+    }
+</style>

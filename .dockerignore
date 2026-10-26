@@ -1,0 +1,8 @@
+**
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!astro.config.ts
+!tsconfig.json
+!src/**
+!docker/**

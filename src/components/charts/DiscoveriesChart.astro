@@ -1,0 +1,121 @@
+---
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { linearTicks } from "@/domain/charts/scale";
+import type { Count } from "@/domain/exoplanets/statistics";
+import { formatInteger } from "@/lib/formatting/number";
+
+interface Props {
+    years: readonly Count<number>[];
+}
+
+const { years } = Astro.props;
+const width = 720;
+const height = 260;
+const margin = { top: 12, right: 8, bottom: 28, left: 44 };
+const plotWidth = width - margin.left - margin.right;
+const plotHeight = height - margin.top - margin.bottom;
+const peak = years.reduce((best, current) => (current.count > best.count ? current : best), years[0] ?? { key: 0, count: 0 });
+const { max, ticks } = linearTicks(peak.count, 4);
+const slot = plotWidth / Math.max(years.length, 1);
+const barWidth = Math.max(slot - 3, 1);
+const yOf = (count: number) => margin.top + plotHeight - (count / max) * plotHeight;
+const labelledYears = years.filter(({ key }) => key % 5 === 0);
+const first = years[0]?.key;
+const last = years.at(-1)?.key;
+---
+
+<figure class="chart">
+    <svg class="chart__svg" viewBox={`0 0 ${width} ${height}`} role="img" aria-labelledby="decouvertes-titre decouvertes-description">
+        <title id="decouvertes-titre">Nombre d'exoplanètes découvertes par année</title>
+        <desc id="decouvertes-description">
+            Histogramme de {first} à {last}. L'année record est {peak.key} avec {formatInteger(peak.count)} découvertes.
+            Les données détaillées sont disponibles dans le tableau qui suit.
+        </desc>
+        {ticks.map((tick) => (
+                <g>
+                    <line class="chart__grid" x1={margin.left} x2={width - margin.right} y1={yOf(tick)} y2={yOf(tick)}/>
+                    <text class="chart__label" x={margin.left - 8} y={yOf(tick) + 4} text-anchor="end">{formatInteger(tick)}</text>
+                </g>
+        ))}
+        {years.map(({ key, count }, index) => (
+                <rect class:list={["chart__bar", { "chart__bar--peak": key === peak.key }]}
+                      x={margin.left + index * slot + 1.5} y={yOf(count)} width={barWidth} height={margin.top + plotHeight - yOf(count)}
+                      rx="1.5"/>
+        ))}
+        {labelledYears.map(({ key }) => (
+                <text class="chart__label" x={margin.left + years.findIndex((year) => year.key === key) * slot + slot / 2}
+                      y={height - 8} text-anchor="middle">{key}</text>
+        ))}
+    </svg>
+    <figcaption class="chart__caption">
+        Année record, mise en évidence : <strong>{peak.key}</strong>, avec {formatInteger(peak.count)} découvertes.
+    </figcaption>
+    <details class="chart__details">
+        <summary>Voir les données sous forme de tableau</summary>
+        <div class="chart__table">
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead scope="col">Année</TableHead>
+                        <TableHead scope="col" className="text-right">Découvertes</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {years.filter(({ count }) => count > 0).map(({ key, count }) => (
+                            <TableRow>
+                                <TableHead scope="row">{key}</TableHead>
+                                <TableCell className="text-right tabular-nums">{formatInteger(count)}</TableCell>
+                            </TableRow>
+                    ))}
+                </TableBody>
+            </Table>
+        </div>
+    </details>
+</figure>
+
+<style>
+    .chart {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .chart__svg {
+        width: 100%;
+        height: auto;
+        overflow: visible;
+    }
+
+    .chart__grid {
+        stroke: var(--chart-grid);
+        stroke-width: 1;
+    }
+
+    .chart__label {
+        font-size: 11px;
+        fill: var(--muted-foreground);
+        font-variant-numeric: tabular-nums;
+    }
+
+    .chart__bar {
+        fill: var(--chart-muted);
+    }
+
+    .chart__bar--peak {
+        fill: var(--chart-brand);
+    }
+
+    .chart__caption {
+        font-size: 0.9375rem;
+    }
+
+    .chart__details summary {
+        font-weight: 600;
+        color: var(--foreground);
+    }
+
+    .chart__table {
+        max-height: 20rem;
+        margin-top: 0.75rem;
+        overflow: auto;
+    }
+</style>

@@ -1,0 +1,59 @@
+---
+import { ComparisonWorkspace } from "@/components/exoplanets/comparison-workspace";
+import { catalog, scatterBackgrounds } from "@/data/catalog";
+import { featuredPlanets } from "@/data/featured";
+import { site } from "@/data/site";
+import { comparisonLimits, comparisonParameter, parseComparisonSlugs } from "@/domain/comparison/selection";
+import { toReference } from "@/domain/exoplanets/model";
+import { cachePolicies } from "@/lib/cache/policies";
+import Base from "@/layouts/Base.astro";
+
+export const prerender = false;
+
+const selection = parseComparisonSlugs(Astro.url.searchParams.get(comparisonParameter));
+const slugs = selection.success ? selection.slugs : [];
+const planets = catalog.findAll(slugs);
+const missing = slugs.filter((slug) => !catalog.findBySlug(slug));
+const notice = selection.success
+    ? missing.length > 0 ? `Identifiants inconnus ignorés : ${missing.join(", ")}.` : null
+    : `${selection.error} La comparaison a été réinitialisée.`;
+const suggestions = catalog.findAll(featuredPlanets.slice(0, 4).map(({ slug }) => slug)).map(toReference);
+Astro.response.headers.set("Cache-Control", cachePolicies.listing);
+
+const title = planets.length > 0
+    ? `Comparer ${planets.map(({ name }) => name).join(", ")} | ${site.name}`
+    : `Comparer des exoplanètes | ${site.name}`;
+---
+
+<Base title={title} description={`Compare côte à côte jusqu'à ${comparisonLimits.max} exoplanètes : masse, rayon, densité, orbite, température et étoile hôte.`}>
+    <div class="container-page compare">
+        <header class="compare__header stagger">
+            <p class="eyebrow">Comparateur</p>
+            <h1>Comparer des exoplanètes</h1>
+            <p>
+                Place côte à côte jusqu'à {comparisonLimits.max} planètes. Les valeurs extrêmes de chaque ligne sont
+                signalées par une flèche, et l'adresse de la page conserve ta sélection pour la partager.
+            </p>
+        </header>
+        <ComparisonWorkspace client:load initialPlanets={planets} notice={notice} backgrounds={scatterBackgrounds}
+                             suggestions={suggestions}/>
+    </div>
+</Base>
+
+<style>
+    .compare {
+        display: grid;
+        gap: 2rem;
+        padding-top: 3rem;
+    }
+
+    .compare__header {
+        display: grid;
+        gap: 0.75rem;
+        max-width: 48rem;
+    }
+
+    .compare__header h1 {
+        font-size: var(--text-h2);
+    }
+</style>

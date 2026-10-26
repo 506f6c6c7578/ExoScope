@@ -1,0 +1,72 @@
+---
+import { Meter } from "@/components/ui/meter";
+import { getDiscoveryMethodLabel } from "@/domain/exoplanets/discovery-methods";
+import type { DiscoveryMethod } from "@/domain/exoplanets/model";
+import type { Count } from "@/domain/exoplanets/statistics";
+import { formatInteger, formatPercent } from "@/lib/formatting/number";
+import { getCatalogueUrl } from "@/lib/url";
+
+interface Props {
+    methods: readonly Count<DiscoveryMethod>[];
+    total: number;
+    limit?: number;
+}
+
+const { methods, total, limit = methods.length } = Astro.props;
+const others = methods.slice(limit).reduce((sum, { count }) => sum + count, 0);
+const rows = [
+    ...methods.slice(0, limit).map(({ key, count }) => ({ label: getDiscoveryMethodLabel(key), href: getCatalogueUrl({ methods: [key] }), count })),
+    ...(others > 0 ? [{ label: "Autres méthodes", href: null, count: others }] : [])
+];
+---
+
+<ol class="methods-chart" aria-label="Répartition des exoplanètes par méthode de découverte">
+    {rows.map(({ label, href, count }) => (
+            <li class="methods-chart__row">
+                {href ? <a class="methods-chart__label" href={href}>{label}</a> : <span class="methods-chart__label">{label}</span>}
+                <span class="methods-chart__value">
+                    {formatInteger(count)} <span class="methods-chart__share">({formatPercent(count / total)})</span>
+                </span>
+                <div class="methods-chart__meter">
+                    <Meter value={count / total}/>
+                </div>
+            </li>
+    ))}
+</ol>
+
+<style>
+    .methods-chart {
+        display: grid;
+        gap: 1.125rem;
+    }
+
+    .methods-chart__row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 0.5rem 1rem;
+        align-items: baseline;
+    }
+
+    .methods-chart__label {
+        font-weight: 600;
+        color: var(--foreground);
+        text-underline-offset: 0.25rem;
+    }
+
+    a.methods-chart__label:hover {
+        text-decoration: underline;
+    }
+
+    .methods-chart__value {
+        font-variant-numeric: tabular-nums;
+        color: var(--foreground);
+    }
+
+    .methods-chart__share {
+        color: var(--muted-foreground);
+    }
+
+    .methods-chart__meter {
+        grid-column: 1 / -1;
+    }
+</style>
