@@ -6,7 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { getReferencePoints, type LabelledPoint, type ScatterKind, type ScatterPoint, toScatterPoint } from "@/domain/charts/scatter";
+import { getReferencePoints, type ScatterKind, type ScatterPoint, type SelectionPoint, toScatterPoint } from "@/domain/charts/scatter";
 import { comparisonLimits } from "@/domain/comparison/selection";
 import type { Exoplanet, ExoplanetReference } from "@/domain/exoplanets/model";
 import { saveComparisonList, useComparisonList } from "@/hooks/use-comparison-list";
@@ -42,10 +42,10 @@ const charts = {
 
 const chartKinds = Object.keys(charts) as ScatterKind[];
 
-function toLabelledPoints(planets: readonly Exoplanet[], kind: ScatterKind): LabelledPoint[] {
-    return planets.flatMap((planet) => {
+function toSelectionPoints(planets: readonly Exoplanet[], kind: ScatterKind): SelectionPoint[] {
+    return planets.flatMap((planet, index) => {
         const point = toScatterPoint(planet, kind);
-        return point ? [{ name: planet.name, x: point[0], y: point[1] }] : [];
+        return point ? [{ name: planet.name, marker: String(index + 1), x: point[0], y: point[1] }] : [];
     });
 }
 
@@ -171,7 +171,7 @@ export function ComparisonWorkspace({ initialPlanets, notice, backgrounds, sugge
                         <p className="text-sm">Ajoute au moins une autre planète pour faire ressortir les différences.</p>
                     )}
                     {hydrated ? <Tabs defaultValue="tableau" className="gap-4">
-                        <TabsList aria-label="Vues de la comparaison" className="max-w-full justify-start overflow-x-auto">
+                        <TabsList aria-label="Vues de la comparaison">
                             <TabsTrigger value="tableau">Tableau</TabsTrigger>
                             {chartKinds.map((kind) => <TabsTrigger key={kind} value={kind}>{charts[kind].tab}</TabsTrigger>)}
                         </TabsList>
@@ -179,7 +179,7 @@ export function ComparisonWorkspace({ initialPlanets, notice, backgrounds, sugge
                             <ComparisonTable planets={planets} onRemove={remove}/>
                         </TabsContent>
                         {chartKinds.map((kind) => {
-                            const selection = toLabelledPoints(planets, kind);
+                            const selection = toSelectionPoints(planets, kind);
                             const absent = planets.filter((planet) => !selection.some(({ name }) => name === planet.name));
                             return (
                                 <TabsContent key={kind} value={kind} className="grid gap-3">

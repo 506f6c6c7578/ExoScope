@@ -1,8 +1,8 @@
 import { CartesianGrid, LabelList, type LabelProps, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis } from "recharts";
 import { ChartContainer } from "@/components/ui/chart";
 import { decadeTicks } from "@/domain/charts/scale";
-import type { LabelledPoint, ScatterPoint } from "@/domain/charts/scatter";
-import { formatSignificant } from "@/lib/formatting/number";
+import type { LabelledPoint, LabelSide, ReferencePoint, ScatterPoint, SelectionPoint } from "@/domain/charts/scatter";
+import { formatAxisTick, formatSignificant } from "@/lib/formatting/number";
 
 interface Axis {
     label: string;
@@ -14,8 +14,8 @@ export interface PlanetScatterProps {
     xAxis: Axis;
     yAxis: Axis;
     background: readonly ScatterPoint[];
-    selection: readonly LabelledPoint[];
-    references: readonly LabelledPoint[];
+    selection: readonly SelectionPoint[];
+    references: readonly ReferencePoint[];
 }
 
 interface TooltipEntry {
@@ -34,18 +34,41 @@ const legendIcons = {
     circle: <circle cx="6" cy="6" r="4" className="fill-chart-muted"/>
 };
 
-function renderPointLabel(position: "top" | "right", className: string) {
+const labelGap = 6;
+const labelSides: readonly LabelSide[] = ["top", "right", "bottom", "left"];
+
+function placeLabel(side: LabelSide, x: number, y: number, width: number, height: number) {
+    switch (side) {
+        case "top":
+            return { x: x + width / 2, y: y - labelGap, textAnchor: "middle", dominantBaseline: "auto" } as const;
+        case "bottom":
+            return { x: x + width / 2, y: y + height + labelGap, textAnchor: "middle", dominantBaseline: "hanging" } as const;
+        case "left":
+            return { x: x - labelGap, y: y + height / 2, textAnchor: "end", dominantBaseline: "middle" } as const;
+        case "right":
+            return { x: x + width + labelGap, y: y + height / 2, textAnchor: "start", dominantBaseline: "middle" } as const;
+    }
+}
+
+function renderPointLabel(side: LabelSide, className: string) {
     return ({ viewBox, value }: LabelProps) => {
         if (!viewBox || !("x" in viewBox) || value === undefined) return null;
         const { x = 0, y = 0, width = 0, height = 0 } = viewBox;
-        return position === "top"
-            ? <text x={x + width / 2} y={y - 8} textAnchor="middle" className={className}>{value}</text>
-            : <text x={x + width + 6} y={y + height / 2} dominantBaseline="middle" className={className}>{value}</text>;
+        return <text {...placeLabel(side, x, y, width, height)} className={className}>{value}</text>;
     };
 }
 
-const referenceLabel = renderPointLabel("right", "fill-muted-foreground text-[11px]");
-const selectionLabel = renderPointLabel("top", "fill-foreground text-xs font-semibold");
+const labelHalo = "stroke-background stroke-[3px] [paint-order:stroke] [stroke-linejoin:round]";
+const referenceLabelClass = `fill-muted-foreground text-[11px] max-sm:hidden ${labelHalo}`;
+const referenceLabels: Record<LabelSide, ReturnType<typeof renderPointLabel>> = {
+    top: renderPointLabel("top", referenceLabelClass),
+    right: renderPointLabel("right", referenceLabelClass),
+    bottom: renderPointLabel("bottom", referenceLabelClass),
+    left: renderPointLabel("left", referenceLabelClass)
+};
+const selectionLabelClass = `fill-foreground text-xs font-semibold ${labelHalo}`;
+const selectionLabel = renderPointLabel("top", `${selectionLabelClass} max-sm:hidden`);
+const selectionMarker = renderPointLabel("top", `${selectionLabelClass} sm:hidden`);
 
 function getDomain(values: readonly number[]): [number, number] {
     const positive = values.filter((value) => value > 0);
@@ -76,25 +99,36 @@ export default function PlanetScatter({ description, xAxis, yAxis, background, s
                 <ScatterChart margin={{ top: 16, right: 24, bottom: 28, left: 12 }}>
                     <CartesianGrid className="[&_line]:stroke-chart-grid"/>
                     <XAxis type="number" dataKey="x" scale="log" domain={xDomain} ticks={decadeTicks(...xDomain)} allowDataOverflow
-                           tickFormatter={formatSignificant}
+                           tickFormatter={formatAxisTick}
                            label={{ value: `${xAxis.label} (${xAxis.unit})`, position: "insideBottom", offset: -18, className: "fill-muted-foreground" }}/>
                     <YAxis type="number" dataKey="y" scale="log" domain={yDomain} ticks={decadeTicks(...yDomain)} allowDataOverflow
-                           tickFormatter={formatSignificant} width={56}
+                           tickFormatter={formatAxisTick} width={56}
                            label={{ value: `${yAxis.label} (${yAxis.unit})`, angle: -90, position: "insideLeft", offset: 4, className: "fill-muted-foreground" }}/>
                     <ZAxis range={[28, 28]}/>
-                    <Tooltip cursor={false} content={({ active, payload }) => (
+                    <Tooltip cursor={false} isAnimationActive={false} content={({ active, payload }) => (
                         <PointTooltip active={active} payload={payload} xAxis={xAxis} yAxis={yAxis}/>
                     )}/>
                     <Scatter data={backgroundPoints} shape="circle" fill="var(--chart-muted)" fillOpacity={0.45} isAnimationActive={false}/>
-                    <Scatter data={references} shape="diamond" fill="var(--chart-reference)" isAnimationActive={false}>
-                        <LabelList dataKey="name" content={referenceLabel}/>
-                    </Scatter>
+                    {labelSides.map((side) => (
+                        <Scatter key={side} data={references.filter(({ labelSide }) => labelSide === side)} shape="diamond"
+                                 fill="var(--chart-reference)" isAnimationActive={false}>
+                            <LabelList dataKey="name" content={referenceLabels[side]}/>
+                        </Scatter>
+                    ))}
                     <Scatter data={selection} shape="star" fill="var(--chart-brand)" isAnimationActive={false}>
                         <LabelList dataKey="name" content={selectionLabel}/>
+                        <LabelList dataKey="marker" content={selectionMarker}/>
                     </Scatter>
                 </ScatterChart>
             </ChartContainer>
-            <figcaption>
+            <figcaption className="grid gap-3">
+                {selection.length > 0 && (
+                    <ol className="flex flex-wrap gap-x-4 gap-y-1 text-sm sm:hidden" aria-label="Repères des planètes comparées">
+                        {selection.map(({ marker, name }) => (
+                            <li key={marker}><span className="font-semibold text-brand">{marker}</span> {name}</li>
+                        ))}
+                    </ol>
+                )}
                 <ul className="flex flex-wrap gap-x-5 gap-y-2 text-sm" aria-label="Légende">
                     {legend.map(({ key, label, shape }) => (
                         <li key={key} className="inline-flex items-center gap-2">

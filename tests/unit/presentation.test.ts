@@ -101,7 +101,8 @@ describe("graphiques", () => {
         expect(sampleScatter(planets, "massRadius")).toHaveLength(50);
         expect(toScatterPoint(makePlanet({ name: "X b", radiusJupiter: null }), "massRadius")).toBeNull();
         expect(sampleScatter([makePlanet({ name: "Y b", provenance: { mass: "estimated" } })], "massRadius")).toEqual([]);
-        expect(getReferencePoints("orbit").find(({ name }) => name === "Terre")).toEqual({ name: "Terre", x: 365.25, y: 1 });
+        expect(getReferencePoints("orbit").find(({ name }) => name === "Terre")).toEqual({ name: "Terre", x: 365.25, y: 1, labelSide: "right" });
+        expect(getReferencePoints("massRadius").find(({ name }) => name === "Vénus")?.labelSide).toBe("bottom");
     });
 });
 

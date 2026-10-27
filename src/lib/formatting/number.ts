@@ -6,6 +6,7 @@ export const unitSpace = "\u00a0";
 const integerFormatter = new Intl.NumberFormat(locale, { maximumFractionDigits: 0 });
 const significantFormatter = new Intl.NumberFormat(locale, { maximumSignificantDigits: 3 });
 const ratioFormatter = new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 3 });
+const compactFormatter = new Intl.NumberFormat(locale, { notation: "compact", maximumFractionDigits: 0 });
 const percentFormatter = new Intl.NumberFormat(locale, { style: "percent", maximumFractionDigits: 1 });
 const dateFormatter = new Intl.DateTimeFormat(locale, { dateStyle: "long", timeZone: "UTC" });
 
@@ -27,6 +28,10 @@ const formatters: Record<QuantityFormat, (value: number) => string> = {
 export function formatQuantity(value: number, format: QuantityFormat, unit: string | null): string {
     const number = formatters[format](value);
     return unit ? `${number}${unitSpace}${unit}` : number;
+}
+
+export function formatAxisTick(value: number): string {
+    return Math.abs(value) >= 10_000 ? compactFormatter.format(value) : formatSignificant(value);
 }
 
 export function formatPercent(ratio: number): string {

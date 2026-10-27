@@ -234,6 +234,23 @@ test.describe("comparateur", () => {
         expect(errors).toEqual([]);
     });
 
+    test("affiche des onglets sans défilement et une infobulle au bon endroit", async ({ page, isMobile }) => {
+        await visit(page, "/comparer?planetes=trappist-1-e,51-peg-b");
+        const tabs = page.getByRole("tablist");
+        expect(await tabs.evaluate((element) => getComputedStyle(element).overflowY)).toBe("visible");
+        await page.getByRole("tab", { name: "Masse et rayon" }).click();
+        await page.getByRole("img", { name: /Nuage de points masse-rayon/ }).scrollIntoViewIfNeeded();
+        if (isMobile) return;
+        const star = page.locator(".recharts-symbols").last();
+        await expect(star).toBeVisible();
+        const box = await star.boundingBox();
+        if (!box) throw new Error("Point introuvable");
+        await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+        await page.evaluate(() => new Promise(requestAnimationFrame));
+        const tooltip = await page.locator(".recharts-tooltip-wrapper").boundingBox();
+        expect(tooltip && Math.hypot(tooltip.x - box.x, tooltip.y - box.y)).toBeLessThan(60);
+    });
+
     test("limite la comparaison à quatre planètes", async ({ page }) => {
         await visit(page, "/comparer?planetes=trappist-1-e,51-peg-b,k2-18-b,proxima-cen-b,hd-209458-b");
         await expect(page.getByText("Une partie de l'adresse a été ignorée")).toBeVisible();

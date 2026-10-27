@@ -11,13 +11,26 @@ export interface LabelledPoint {
     y: number;
 }
 
+export interface SelectionPoint extends LabelledPoint {
+    marker: string;
+}
+
+export type LabelSide = "top" | "right" | "bottom" | "left";
+
+export interface ReferencePoint extends LabelledPoint {
+    labelSide: LabelSide;
+}
+
 export type ScatterKind = "massRadius" | "orbit";
+
+type SolarSystemBody = keyof typeof solarSystemPlanets;
 
 interface ScatterDefinition {
     x: (planet: Exoplanet) => number | null;
     y: (planet: Exoplanet) => number | null;
     include: (planet: Exoplanet) => boolean;
-    reference: (body: (typeof solarSystemPlanets)[keyof typeof solarSystemPlanets]) => ScatterPoint;
+    reference: (body: (typeof solarSystemPlanets)[SolarSystemBody]) => ScatterPoint;
+    labelSides: Partial<Record<SolarSystemBody, LabelSide>>;
 }
 
 export const scatterDefinitions: Record<ScatterKind, ScatterDefinition> = {
@@ -25,13 +38,15 @@ export const scatterDefinitions: Record<ScatterKind, ScatterDefinition> = {
         x: summaryProperties.mass.read,
         y: summaryProperties.radius.read,
         include: hasMeasuredMassAndRadius,
-        reference: (body) => [body.massEarth, body.radiusEarth]
+        reference: (body) => [body.massEarth, body.radiusEarth],
+        labelSides: { venus: "bottom", uranus: "left" }
     },
     orbit: {
         x: summaryProperties.orbitalPeriod.read,
         y: (planet) => planet.semiMajorAxisAu,
         include: (planet) => planet.provenance.orbitalPeriod === undefined && planet.provenance.semiMajorAxis === undefined,
-        reference: (body) => [body.orbitalPeriodDays, body.semiMajorAxisAu]
+        reference: (body) => [body.orbitalPeriodDays, body.semiMajorAxisAu],
+        labelSides: {}
     }
 };
 
@@ -60,9 +75,10 @@ export function sampleScatter(planets: readonly Exoplanet[], kind: ScatterKind, 
         .filter((point): point is ScatterPoint => point !== undefined);
 }
 
-export function getReferencePoints(kind: ScatterKind): LabelledPoint[] {
-    return Object.values(solarSystemPlanets).map((body) => {
-        const [x, y] = scatterDefinitions[kind].reference(body);
-        return { name: body.name, x, y };
+export function getReferencePoints(kind: ScatterKind): ReferencePoint[] {
+    const { reference, labelSides } = scatterDefinitions[kind];
+    return (Object.entries(solarSystemPlanets) as [SolarSystemBody, (typeof solarSystemPlanets)[SolarSystemBody]][]).map(([key, body]) => {
+        const [x, y] = reference(body);
+        return { name: body.name, x, y, labelSide: labelSides[key] ?? "right" };
     });
 }
