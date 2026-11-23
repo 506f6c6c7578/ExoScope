@@ -47,7 +47,7 @@ une relation masse-rayon, calculée, ou limite publiée. Une donnée absente est
 
 | Service    | Image                         | Rôle                                                                 |
 |------------|-------------------------------|----------------------------------------------------------------------|
-| `exoscope` | `nginx-unprivileged` (Alpine) | Sert les pages statiques précompressées et relaie les routes dynamiques |
+| `exoscope` | `nginx` (Alpine, non-root) | Sert les pages statiques précompressées et relaie les routes dynamiques |
 | `app`      | `node` (Alpine)               | Serveur Astro autonome : catalogue, fiches, comparateur et API        |
 
 ```mermaid
